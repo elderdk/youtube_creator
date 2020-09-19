@@ -1,0 +1,13 @@
+code --install-extension abusaidm.html-snippets
+code --install-extension batisteo.vscode-django
+code --install-extension donjayamanne.python-extension-pack
+code --install-extension kiteco.kite
+code --install-extension magicstack.MagicPython
+code --install-extension ms-python.python
+code --install-extension njpwerner.autodocstring
+code --install-extension Shan.code-settings-sync
+code --install-extension sidthesloth.html5-boilerplate
+code --install-extension tht13.python
+code --install-extension VisualStudioExptTeam.vscodeintellicode
+code --install-extension wholroyd.jinja
+code --install-extension wwm.better-align
