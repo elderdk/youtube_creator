@@ -1,6 +1,5 @@
 from django.db import models
 from datetime import datetime
-# from .constants import * # causes ImportError: attempted relative import with no known parent package
 import praw
 
 # Create your models here.
