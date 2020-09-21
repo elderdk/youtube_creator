@@ -15,8 +15,6 @@ class Submission(models.Model):
     text_len      = models.IntegerField()
     created_time  = models.DateTimeField()
     scraped_time  = models.DateTimeField(auto_now_add=True)
-    downloaded    = models.BooleanField(default=False)
-    download_date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         return self.title

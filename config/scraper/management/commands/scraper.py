@@ -1,11 +1,14 @@
 # from .constants import *
-from django.core.management.base import BaseCommand, CommandError
 from datetime import datetime
-from scraper.models import Submission, Comment
-from .constants import *
+
 import praw
 import pytz
 from django.core.mail import send_mail
+from django.core.management.base import BaseCommand, CommandError
+
+from scraper.models import Comment, Submission
+
+from .constants import *
 
 
 class Command(BaseCommand):
