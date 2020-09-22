@@ -14,7 +14,6 @@ class Command(BaseCommand):
     help = 'Scrape reddit posts'
 
     def add_arguments(self, parser):
-        # add arguments to control the type of post scraping (i.e. top, new, hot)
         parser.add_argument(
             '--scope', 
             nargs='?', 
@@ -85,7 +84,7 @@ class Command(BaseCommand):
                             # get comments
                             sub.comment_sort = 'hot'
                     
-                            for c in sub.comments[:5]:
+                            for c in submission.comments[:5]:
                                 com = Comment
                                 submission = s.objects.get(sub_id = sub.id)
                                 com(body=c.body, submission=submission).save()
