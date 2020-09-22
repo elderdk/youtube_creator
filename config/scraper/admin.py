@@ -26,11 +26,12 @@ class SubmissionAdmin(admin.ModelAdmin):
             sentences = re.findall('\s+[^.!?]*[.!?]', msg)
             return '\n'.join([s.strip() for s in sentences])
 
+        # for tomorrow: get the source text file path and add that to the zipfile
         for sub in submissions:
             slug_title = slugify(sub.title, allow_unicode=True)
             dt = datetime.strftime(sub.created_time, '%Y%m%d')
             tmp_folder = Path("./scraper/tmp")
-            fname = tmp_folder.joinpath(f"{dt}_{sub.subreddit}_{sub.sub_id}_{slug_title[:20]}.txt")
+            fname = tmp_folder.joinpath(f"{dt}_{sub.subreddit}_{sub.sub_id}_{slug_title[:30]}.txt")
             with fname.open(mode='w') as f:
                 text = """
                 {title}
