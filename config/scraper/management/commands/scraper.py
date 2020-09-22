@@ -10,6 +10,9 @@ from scraper.models import Comment, Submission
 from decouple import config, Csv
 
 
+MAX_COMMENTS = 5
+COMMENT_SORT = 'hot'
+
 class Command(BaseCommand):
     help = 'Scrape reddit posts'
 
@@ -44,12 +47,11 @@ class Command(BaseCommand):
 
         for subreddit in config('SUBS_TO_SCRAPE', cast=Csv()):
             subred = reddit.subreddit(subreddit)
+
             if options['scope'] == 'top':
                 subred = subred.top("all", limit=options['limit'])
-                print(f"scraping top with limit of {options['limit']}")
             else:
                 subred = subred.hot(limit=options['limit'])
-                print(f"scraping hot with limit of {options['limit']}")
             
             for submission in subred:
                 try:
@@ -72,24 +74,25 @@ class Command(BaseCommand):
                                 pass
                             else:
                                 self.stdout.write(self.style.SUCCESS(f'Post changes detected at {submission.id}. Proceed scraping...'))
-                                s = Submission
-                                s(**d).save()
+                                sub = Submission
+                                sub(**d).save()
                                 updated_posts.append(d['title'])
                         except:
                             self.stdout.write(self.style.SUCCESS(f'No existing post found for {submission.id}. Proceed scraping...'))
-                            s = Submission
-                            s(**d).save()
+                            sub = Submission
+                            sub(**d).save()
                             new_posts.append(d['title'])
 
                             # get comments
-                            sub.comment_sort = 'hot'
+                            submission.comment_sort = COMMENT_SORT
                     
-                            for c in submission.comments[:5]:
+                            for c in submission.comments[:MAX_COMMENTS]:
                                 com = Comment
-                                submission = s.objects.get(sub_id = sub.id)
-                                com(body=c.body, submission=submission).save()
-                except:
-                    self.stdout.write(self.style.WARNING(f'Error. Skipping.'))
+                                parent_sub = sub.objects.get(sub_id = submission.id)
+                                com(body=c.body, submission=parent_sub).save()
+  
+                except Exception as e:
+                    self.stdout.write(self.style.WARNING(f'Error. Skipping. {e}'))
                     
         if len(new_posts) > 0:
             msg = 'The following new posts have been scraped:\n\n'
