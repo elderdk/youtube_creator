@@ -1,19 +1,28 @@
 import re
+import shutil
 from datetime import datetime
 from pathlib import Path
-import shutil
+from zipfile import ZipFile
 
-from django.contrib import admin
-from django.utils.text import slugify
-from django.contrib import messages
-from django.utils.translation import ngettext
+from django.contrib import admin, messages
+from django.core.files.temp import NamedTemporaryFile
 from django.http import FileResponse
+from django.utils.text import slugify
+from django.utils.translation import ngettext
 
 from .models import Comment, Submission
 
+TMP_FOLDER = Path("/tmp")
+FNAME = "{dt}_{subreddit}_{sub_id}_{slug_title}"
+TXT_BODY = """
+{title}
+/r/{subreddit}
 
-TMP_FOLDER = Path("./scraper/tmp")
-FNAME = "{dt}_{subreddit}_{sub_id}_{slug_title}.txt"
+Author: {author}
+URL: {url}
+
+{text_body}                              
+"""
 
 # Register your models here.
 @admin.register(Submission)
@@ -28,67 +37,65 @@ class SubmissionAdmin(admin.ModelAdmin):
             sentences = re.findall('\s+[^.!?]*[.!?]', msg)
             return '\n'.join([s.strip() for s in sentences])
 
-    def download(self, request, submissions):
+    def make_zip(self, tmp_files):
+        with NamedTemporaryFile(prefix='download', suffix='.zip') as zf_file:
+            with ZipFile(zf_file, 'w') as myzip:
+                for txt_file in tmp_files:
+                    myzip.write(txt_file.name)
+                    txt_file.close()
+
+            response = FileResponse(
+                open(zf_file.name, 'rb'), 
+                as_attachment=True
+                )
+
+            response['Content-Disposition'] = f"attachment; filename={zf_file.name}"
+        
+        return response
+
+    def make_tmp_files(self, submissions):
+        tmp_files = list()
 
         for sub in submissions:
             slug_title = slugify(sub.title, allow_unicode=True)
             dt = datetime.strftime(sub.created_time, '%Y%m%d')
-            fname = TMP_FOLDER.joinpath(
-                        FNAME.format(
+
+            fname = FNAME.format(
                             dt=dt,
                             subreddit=sub.subreddit,
                             sub_id=sub.sub_id,
-                            slug_title=slug_title[:30],
-                        ))
-            with fname.open(mode='w') as f:
-                text = """
-                {title}
-                /r/{subreddit}
+                            slug_title=slug_title[:30],    
+            )
 
-                Author: {author}
-                URL: {url}
+            tfile = NamedTemporaryFile(suffix='.txt', prefix=fname)
 
-                {text_body}                              
-                """.format(
-                    title = sub.title,
-                    subreddit = sub.subreddit,
-                    author = sub.author,
-                    url = sub.url,
-                    text_body = self.divide_per_line(sub.selftext)
-                )
+            text = TXT_BODY.format(
+                        title = sub.title,
+                        subreddit = sub.subreddit,
+                        author = sub.author,
+                        url = sub.url,
+                        text_body = self.divide_per_line(sub.selftext)
+                    )
 
-                f.write(text)     
+            tfile.write(bytes(text, 'utf-8'))
+            tfile.flush()
+            tmp_files.append(tfile)
+
+        return tmp_files
+
+    def download(self, request, submissions):
+
+        tmp_files = self.make_tmp_files(submissions)
+
+        zip_response = self.make_zip(tmp_files)
 
         self.message_user(request, ngettext(
-            '%d file downloaded',
-            '%d files downloaded',
-            submissions,
-            ) % len(submissions), messages.SUCCESS)
+        '%d file downloaded',
+        '%d files downloaded',
+        submissions,
+        ) % len(submissions), messages.SUCCESS)
 
-        # Below is for creating a zip file and auto-initiating download.
-        # Below should be moved to another file later for aesthetics.
-        
-        # Currently the zip file is saved in the root folder (i.e. /config)
-        # This should be fixed so that download.zip is saved and cleaned up after downloading.
-
-        zf_file = shutil.make_archive(
-            TMP_FOLDER.joinpath('download').name, 
-            'zip', 
-            TMP_FOLDER
-            )
-
-        response = FileResponse(
-            open(zf_file, 'rb'), 
-            as_attachment=True
-            )
-
-        response['Content-Disposition'] = f"attachment; filename={zf_file.split('/')[-1]}"
-
-        # Clean the TMP_FOLDER
-        for f in TMP_FOLDER.glob('*.txt'):
-            f.unlink()
-
-        return response
+        return zip_response
         
     download.short_description = "Download the selected files"
 
