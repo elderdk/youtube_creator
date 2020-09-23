@@ -92,10 +92,6 @@ class Command(BaseCommand):
 
                 if created:
                     new_posts.append(submission.title)
-                    self.stdout.write(
-                        self.style.SUCCESS(
-                            PROCEED.format(submission.id)
-                            ))
 
                     # get comments
                     submission.comment_sort = COMMENT_SORT
@@ -106,12 +102,6 @@ class Command(BaseCommand):
                             sub_id = submission.id
                             )
                         com(body=c.body, submission=parent_sub).save()
-
-            else:
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        SKIPPING.format(submission.id)
-                        ))
 
         return new_posts, updated_posts
 
