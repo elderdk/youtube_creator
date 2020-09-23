@@ -12,6 +12,9 @@ from django.http import FileResponse
 from .models import Comment, Submission
 
 
+TMP_FOLDER = Path("./scraper/tmp")
+FNAME = "{dt}_{subreddit}_{sub_id}_{slug_title}.txt"
+
 # Register your models here.
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
@@ -20,18 +23,23 @@ class SubmissionAdmin(admin.ModelAdmin):
 
     actions = ['download']
 
-    def download(self, request, submissions):
+    def divide_per_line(self, msg):
 
-        def _divide_per_line(msg):
             sentences = re.findall('\s+[^.!?]*[.!?]', msg)
             return '\n'.join([s.strip() for s in sentences])
 
-        # for tomorrow: get the source text file path and add that to the zipfile
+    def download(self, request, submissions):
+
         for sub in submissions:
             slug_title = slugify(sub.title, allow_unicode=True)
             dt = datetime.strftime(sub.created_time, '%Y%m%d')
-            tmp_folder = Path("./scraper/tmp")
-            fname = tmp_folder.joinpath(f"{dt}_{sub.subreddit}_{sub.sub_id}_{slug_title[:30]}.txt")
+            fname = TMP_FOLDER.joinpath(
+                        FNAME.format(
+                            dt=dt,
+                            subreddit=sub.subreddit,
+                            sub_id=sub.sub_id,
+                            slug_title=slug_title[:30],
+                        ))
             with fname.open(mode='w') as f:
                 text = """
                 {title}
@@ -42,11 +50,11 @@ class SubmissionAdmin(admin.ModelAdmin):
 
                 {text_body}                              
                 """.format(
-                    title     = sub.title.strip(),
-                    subreddit = sub.subreddit.strip(),
-                    author    = sub.author.strip(),
-                    url       = sub.url.strip(),
-                    text_body = _divide_per_line(sub.selftext)
+                    title = sub.title,
+                    subreddit = sub.subreddit,
+                    author = sub.author,
+                    url = sub.url,
+                    text_body = self.divide_per_line(sub.selftext)
                 )
 
                 f.write(text)     
@@ -62,12 +70,22 @@ class SubmissionAdmin(admin.ModelAdmin):
         
         # Currently the zip file is saved in the root folder (i.e. /config)
         # This should be fixed so that download.zip is saved and cleaned up after downloading.
-        zf_file = shutil.make_archive(tmp_folder.joinpath('download').name, 'zip', tmp_folder)
-        response = FileResponse(open(zf_file, 'rb'), as_attachment=True)
+
+        zf_file = shutil.make_archive(
+            TMP_FOLDER.joinpath('download').name, 
+            'zip', 
+            TMP_FOLDER
+            )
+
+        response = FileResponse(
+            open(zf_file, 'rb'), 
+            as_attachment=True
+            )
+
         response['Content-Disposition'] = f"attachment; filename={zf_file.split('/')[-1]}"
 
-        # Clean the tmp_folder
-        for f in tmp_folder.glob('*.txt'):
+        # Clean the TMP_FOLDER
+        for f in TMP_FOLDER.glob('*.txt'):
             f.unlink()
 
         return response

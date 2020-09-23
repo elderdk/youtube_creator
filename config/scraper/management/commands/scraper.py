@@ -1,13 +1,13 @@
 # from .constants import *
 from datetime import datetime
 
-import praw
 import pytz
 from django.core.mail import send_mail
 from django.core.management.base import BaseCommand, CommandError
 
 from scraper.models import Comment, Submission
 from decouple import config, Csv
+from .reddit import reddit
 
 
 MAX_COMMENTS = 5
@@ -34,19 +34,37 @@ class Command(BaseCommand):
             help='Maximum number to scrape from each subreddit'
             )
 
+    def make_email_body(self, new_posts, updated_posts):
+        if len(new_posts) > 0:
+            msg = '\n'.join(new_posts)
+            title = 'The following new posts have been scraped:\n\n'
+            msg.append(title, 0)
+
+        if len(updated_posts) > 0:
+            msg.append('\n\nThe following posts have been updated and scraped again:\n\n')
+            msg.append('\n'.join(updated_posts))
+
+        return msg
+
+    def send_email(self, email_body):
+            
+        send_mail(
+            'New or updated posts scraped.',
+            email_body,
+            config('SENDER_EMAIL'),
+            [config('RECEIVER_EMAIL')],
+            fail_silently=False,
+            )
+
     def handle(self, *args, **options):
 
         new_posts = list()
         updated_posts = list()
 
-        reddit = praw.Reddit(
-                        client_id     = config('CLIENT_ID'),
-                        client_secret = config('CLIENT_SECRET'),
-                        user_agent    = config('USERAGENT')
-                        )
+        red = reddit()
 
         for subreddit in config('SUBS_TO_SCRAPE', cast=Csv()):
-            subred = reddit.subreddit(subreddit)
+            subred = red.subreddit(subreddit)
 
             if options['scope'] == 'top':
                 subred = subred.top("all", limit=options['limit'])
@@ -93,22 +111,8 @@ class Command(BaseCommand):
   
                 except Exception as e:
                     self.stdout.write(self.style.WARNING(f'Error. Skipping. {e}'))
-                    
-        if len(new_posts) > 0:
-            msg = 'The following new posts have been scraped:\n\n'
-            for p in new_posts:
-                msg = msg + '\t' + p + '\n'
+            
+        email_body = make_email_body(new_posts, updated_posts)
 
-        if len(updated_posts) > 0:
-            msg += '\nThe following posts have been updated and scraped again:\n\n'
-            for p in updated_posts:
-                msg = msg + '\t' + p + '\n'
-
-        if len(msg) > 0:
-            send_mail(
-                'New or updated posts scraped.',
-                msg,
-                'elder.dk@gmail.com',
-                ['elder.dk@gmail.com'],
-                fail_silently=False,
-            )
+        if any(new_posts, updated_posts):
+            send_email(email_body)
