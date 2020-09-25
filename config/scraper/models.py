@@ -1,7 +1,5 @@
 from django.db import models
-from datetime import datetime
-from django.utils import timezone
-import praw
+
 
 # Create your models here.
 class Submission(models.Model):
@@ -15,10 +13,12 @@ class Submission(models.Model):
     text_len = models.IntegerField()
     created_time = models.DateTimeField()
     scraped_time = models.DateTimeField(auto_now_add=True)
-    # make charfield placeholders called "st_path" and "tt_path" for soure and target path, to be updated upon creation and upload
+    # make charfield placeholders called "st_path" and "tt_path"
+    # for soure and target path, to be updated upon creation and upload
 
     def __str__(self):
         return self.title
+
 
 class Comment(models.Model):
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE)

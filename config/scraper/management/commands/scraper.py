@@ -1,14 +1,13 @@
-# from .constants import *
 from datetime import datetime
 
 import pytz
-from django.db.models import Q
-from django.core.mail import send_mail
-from django.core.management.base import BaseCommand, CommandError
+from decouple import Csv, config
+from django.core.management.base import BaseCommand
 
 from scraper.models import Comment, Submission
-from decouple import config, Csv
+
 from .reddit import reddit
+from .send_email import make_email_body, send_email
 
 
 MAX_COMMENTS = 5
@@ -16,46 +15,26 @@ COMMENT_SORT = 'hot'
 PROCEED = 'No existing post found for {}. Proceed scraping...'
 SKIPPING = 'Existing post found for {}. Skpping...'
 
+
 class Command(BaseCommand):
     help = 'Scrape reddit posts'
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--scope', 
-            nargs='?', 
-            const='top', 
-            default='top', 
+            '--scope',
+            nargs='?',
+            const='top',
+            default='top',
             type=str,
             help='Deterine the scope of scraping i.e. top or hot'
             )
         parser.add_argument(
-            '--limit', 
-            nargs='?', 
-            const=5, 
-            default=5, 
+            '--limit',
+            nargs='?',
+            const=5,
+            default=5,
             type=int,
             help='Maximum number to scrape from each subreddit'
-            )
-
-    def make_email_body(self, new_posts, updated_posts):
-        if len(new_posts) > 0:
-            new_title = 'The following new posts have been scraped:\n'
-            new_posts.insert(0, new_title)
-
-        if len(updated_posts) > 0:
-            update_title = '\n\nThe following posts have been updated and scraped again:\n'
-            updated_posts.insert(0, update_title)
-
-        return '\n'.join(new_posts) + '\n'.join(updated_posts)
-
-    def send_email(self, email_body):
-            
-        send_mail(
-            'New or updated posts scraped.',
-            email_body,
-            config('SENDER_EMAIL'),
-            [config('RECEIVER_EMAIL')],
-            fail_silently=False,
             )
 
     def make_dict(self, submission):
@@ -76,18 +55,21 @@ class Command(BaseCommand):
 
     def update_or_create(self, subred):
 
-        new_posts = list()
-        updated_posts = list()
+        new_posts = []
+        updated_posts = []
 
         for submission in subred:
-    
-            d = self.make_dict(submission)
 
-            if d:
+            parsed_dict = self.make_dict(submission)
+
+            if not parsed_dict:
+                continue
+
+            else:
                 submisssison, created = Submission.objects\
                                 .update_or_create(
-                                    sub_id=d['sub_id'],
-                                    defaults = d
+                                    sub_id=parsed_dict['sub_id'],
+                                    defaults=parsed_dict
                                     )
 
                 if created:
@@ -95,19 +77,18 @@ class Command(BaseCommand):
 
                     # get comments
                     submission.comment_sort = COMMENT_SORT
-            
+
                     for c in submission.comments[:MAX_COMMENTS]:
-                        com = Comment
                         parent_sub = Submission.objects.get(
-                            sub_id = submission.id
+                            sub_id=submission.id
                             )
-                        com(body=c.body, submission=parent_sub).save()
+                        Comment(body=c.body, submission=parent_sub).save()
 
         return new_posts, updated_posts
 
     def get_scope(self, subred, options):
         if options['scope'] == 'top':
-                subred = subred.top("all", limit=options['limit'])
+            subred = subred.top("all", limit=options['limit'])
         else:
             subred = subred.hot(limit=options['limit'])
 
@@ -123,6 +104,6 @@ class Command(BaseCommand):
             subred = self.get_scope(subred, options)
             new, updated = self.update_or_create(subred)
 
-        if any([new, updated]):
-            email_body = self.make_email_body(new, updated)
-            self.send_email(email_body)
+        if new or updated:
+            email_body = make_email_body(new, updated)
+            send_email(email_body)
