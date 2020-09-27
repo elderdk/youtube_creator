@@ -13,9 +13,8 @@ class Submission(models.Model):
     text_len = models.IntegerField()
     created_time = models.DateTimeField()
     scraped_time = models.DateTimeField(auto_now_add=True)
-    # make charfield placeholders called "st_path" and "tt_path"
-    # for soure and target path, to be updated upon creation and upload
-
+    dub_text = models.TextField(blank=True)
+    
     def __str__(self):
         return self.title
 
