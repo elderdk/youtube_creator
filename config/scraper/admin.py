@@ -6,8 +6,8 @@ from django.utils.translation import ngettext
 
 from .download import get_zip
 from .models import Comment, Submission
-from .dub_maker import MakeDub
-from .sub_maker import MakeSub
+from .dubbings import MakeDubbingAudioFiles, DubError
+from .subtitles import MakeSubImageFiles
 
 
 # Register your models here.
@@ -33,14 +33,29 @@ class SubmissionAdmin(admin.ModelAdmin):
 
     def make_dub(self, request, submissions):
 
-        self.message_user(request, ngettext(
-            '%d file downloaded',
-            '%d files downloaded',
-            submissions,
-            ) % len(submissions), messages.SUCCESS)
+        try:
+            dub = MakeDubbingAudioFiles(submissions)
+            zip_file = dub.return_zip()
+
+            self.message_user(
+                request, 
+                ngettext(
+                    '%d file downloaded',
+                    '%d files downloaded',
+                    submissions,
+                    ) % len(submissions),
+                messages.SUCCESS
+                )
+            return zip_file
         
-        dub = MakeDub(submissions)
-        return dub.get_zip()
+        except DubError:
+            self.message_user(
+                request, 
+                'Error occured while generating a dub zip.',
+                messages.ERROR
+            )
+        
+        
 
     def make_sub(self, request, submissions):
     
@@ -50,8 +65,9 @@ class SubmissionAdmin(admin.ModelAdmin):
             submissions,
             ) % len(submissions), messages.SUCCESS)
         
-        sub = MakeSub(submissions)
-        return sub.get_zip()
+        sub = MakeSubImageFiles(submissions)
+        zip_file = sub.return_zip()
+        return zip_file
 
         
     download.short_description = "Download the selected files"

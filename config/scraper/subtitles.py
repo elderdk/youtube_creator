@@ -7,26 +7,31 @@ from django.core.files.temp import NamedTemporaryFile
 from django.http import FileResponse
 from PIL import Image, ImageDraw, ImageFont
 
+from .zip import get_zip
+
+
 BASE_DIR = Path(__file__).parent
 FONT_BASE = Path(__file__).parent.joinpath('library/fonts/')
-FONT_SIZE = 100
+FONT_FILE = FONT_BASE.joinpath('TmoneyRoundWindExtraBold.otf')
+FONT_SIZE = 90
+
 BACKGROUND_IMAGE = BASE_DIR.joinpath('pottery.jpg')
 
 
-class MakeSub:
+class MakeSubImageFiles:
     def __init__(self, submissions):
         self.submissions = submissions
 
         # make text image
-        self.otf_bold_path = FONT_BASE.joinpath(
-            'TmoneyRoundWindExtraBold.otf')
         self.otf_bold_font = ImageFont.truetype(
-            self.otf_bold_path.as_posix(), FONT_SIZE)
+            FONT_FILE.as_posix(), 
+            FONT_SIZE
+            )
 
     def file_name(self, idx, sub_id):
         return f"{sub_id}_sub_{str(idx).zfill(3)}"
 
-    def make_sub(self, idx, line, sub_id):
+    def make_subtitles(self, idx, line, sub_id):
 
         # make background image
         bg_image = Image.open(BACKGROUND_IMAGE)
@@ -39,8 +44,8 @@ class MakeSub:
         bg_image = bg_image.resize((width, int(height)))
 
         # set textbox height    
-        top_margin = 680
-        height = 1080 - top_margin
+        top_margin = 780
+        height = bg_image.size[1] - top_margin
 
         # make textbox
         textbox = Image.new("RGBA", (1920, height), (0, 0, 0, 215))
@@ -68,42 +73,25 @@ class MakeSub:
 
         return tfile
 
-    def make_tmp_sub(self):
+    def make_tmp_subtitles(self):
 
-        tmp_sub = list()
+        temporary_subtitles = list()
 
         for sub in self.submissions:
 
             lines = sub.dub_text.split('\n')
 
             for idx, line in enumerate(lines):
-                if len(line.strip()) != 0:
-                    tfile = self.make_sub(idx, line, sub.sub_id)
-                    tmp_sub.append(tfile)
+                if line.strip():
+                    tfile = self.make_subtitles(idx, line, sub.sub_id)
+                    temporary_subtitles.append(tfile)
 
-        return tmp_sub
+        return temporary_subtitles
 
-    def make_zip(self, tmp_files):
-        with NamedTemporaryFile(
-            prefix='sub_download', suffix='.zip'
-            ) as zf_file:
-
-            with ZipFile(zf_file, 'w') as myzip:
-                for tfile in tmp_files:
-                    myzip.write(tfile.name)
-                    tfile.close()
-
-            response = FileResponse(
-                open(zf_file.name, 'rb'), 
-                as_attachment=True
-                )
-
-            response['Content-Disposition'] = f"attachment; filename={zf_file.name}"
-
-        return response
-
-    def get_zip(self):
-        tmp_files = self.make_tmp_sub()
-        zip_response = self.make_zip(tmp_files)
-
-        return zip_response
+    def return_zip(self):
+        tmp_files = self.make_tmp_subtitles()
+        kwargs = {
+            "prefix": "sub_download",
+            "suffix": ".zip",
+        }
+        return get_zip(tmp_files, **kwargs)
