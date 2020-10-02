@@ -44,7 +44,7 @@ class MakeSubImageFiles:
         bg_image = bg_image.resize((width, int(height)))
 
         # set textbox height    
-        top_margin = 780
+        top_margin = 980
         height = bg_image.size[1] - top_margin
 
         # make textbox

@@ -14,9 +14,14 @@ class Submission(models.Model):
     created_time = models.DateTimeField()
     scraped_time = models.DateTimeField(auto_now_add=True)
     dub_text = models.TextField(blank=True)
+    sub_len = models.IntegerField(default=0, blank=True)
     
     def __str__(self):
         return self.title
+    
+    def save(self, *args, **kwargs):
+        self.sub_len = len(self.dub_text)
+        super().save(*args, **kwargs)
 
 
 class Comment(models.Model):

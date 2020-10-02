@@ -16,7 +16,7 @@ class SubmissionAdmin(admin.ModelAdmin):
     passdate_hierarchy = 'scraped_time'
     list_display = (
         'sub_id', 'subreddit', 'score', 
-        'text_len', 'created_time', 'title'
+        'text_len', 'sub_len', 'created_time', 'title'
         )
     ordering = ('-created_time',)
     actions = ['download', 'make_dub', 'make_sub']

@@ -38,20 +38,24 @@ class Command(BaseCommand):
             )
 
     def make_dict(self, submission):
-        if '[meta]' not in submission.title:
-            d = dict()
-            d['subreddit'] = submission.subreddit.display_name
-            d['title'] = submission.title
-            d['author'] = submission.author.name
-            d['sub_id'] = submission.id
-            d['url'] = submission.url
-            d['score'] = int(submission.score)
-            d['selftext'] = submission.selftext
-            d['text_len'] = len(submission.selftext)
-            d['created_time'] = pytz.utc.localize(
-                datetime.utcfromtimestamp(submission.created_utc)
-                )
-            return d
+        try:
+            if '[meta]' not in submission.title:
+                d = dict()
+                d['subreddit'] = submission.subreddit.display_name
+                d['title'] = submission.title
+                d['author'] = submission.author.name
+                d['sub_id'] = submission.id
+                d['url'] = submission.url
+                d['score'] = int(submission.score)
+                d['selftext'] = submission.selftext
+                d['text_len'] = len(submission.selftext)
+                d['created_time'] = pytz.utc.localize(
+                    datetime.utcfromtimestamp(submission.created_utc)
+                    )
+                return d
+
+        except AttributeError as e:
+            print(e)
 
     def update_or_create(self, subred):
 
