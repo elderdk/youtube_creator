@@ -6,7 +6,7 @@ from pathlib import Path
 
 from django.core.files.temp import NamedTemporaryFile
 
-from .zip import get_zip
+from .zipper import get_zip
 
 import requests
 

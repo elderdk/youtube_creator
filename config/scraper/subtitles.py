@@ -7,15 +7,15 @@ from django.core.files.temp import NamedTemporaryFile
 from django.http import FileResponse
 from PIL import Image, ImageDraw, ImageFont
 
-from .zip import get_zip
+from .zipper import get_zip
 
 
 BASE_DIR = Path(__file__).parent
 FONT_BASE = Path(__file__).parent.joinpath('library/fonts/')
 FONT_FILE = FONT_BASE.joinpath('TmoneyRoundWindExtraBold.otf')
-FONT_SIZE = 90
+FONT_SIZE = 80
 
-BACKGROUND_IMAGE = BASE_DIR.joinpath('pottery.jpg')
+BACKGROUND_IMAGE = BASE_DIR.joinpath('sad_girl.jpg')
 
 
 class MakeSubImageFiles:
@@ -29,7 +29,7 @@ class MakeSubImageFiles:
             )
 
     def file_name(self, idx, sub_id):
-        return f"{sub_id}_sub_{str(idx).zfill(3)}"
+        return f"{sub_id}_sub_{str(idx).zfill(3)}_"
 
     def make_subtitles(self, idx, line, sub_id):
 
@@ -44,7 +44,7 @@ class MakeSubImageFiles:
         bg_image = bg_image.resize((width, int(height)))
 
         # set textbox height    
-        top_margin = 980
+        top_margin = 630
         height = bg_image.size[1] - top_margin
 
         # make textbox
