@@ -34,11 +34,9 @@ class MakeSubImageFiles:
 
     def img_crop(self, img):
         if img.height > YOUTUBE_HEIGHT:
-            print(img.height)
             delta = (img.height - YOUTUBE_HEIGHT) / 2
             left, upper = 0, delta
             right, lower = YOUTUBE_WIDTH, img.height - delta
-            print(left, upper, right, lower)
             return img.crop((left, upper, right, lower))
 
     def make_subtitles(self, idx, line, sub_id):
