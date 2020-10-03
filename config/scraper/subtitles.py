@@ -15,8 +15,9 @@ FONT_BASE = Path(__file__).parent.joinpath('library/fonts/')
 FONT_FILE = FONT_BASE.joinpath('TmoneyRoundWindExtraBold.otf')
 FONT_SIZE = 80
 
-BACKGROUND_IMAGE = BASE_DIR.joinpath('sad_girl.jpg')
-
+BACKGROUND_IMAGE = BASE_DIR.joinpath('pottery.jpg')
+YOUTUBE_WIDTH = 1920
+YOUTUBE_HEIGHT = 1080
 
 class MakeSubImageFiles:
     def __init__(self, submissions):
@@ -31,6 +32,15 @@ class MakeSubImageFiles:
     def file_name(self, idx, sub_id):
         return f"{sub_id}_sub_{str(idx).zfill(3)}_"
 
+    def img_crop(self, img):
+        if img.height > YOUTUBE_HEIGHT:
+            print(img.height)
+            delta = (img.height - YOUTUBE_HEIGHT) / 2
+            left, upper = 0, delta
+            right, lower = YOUTUBE_WIDTH, img.height - delta
+            print(left, upper, right, lower)
+            return img.crop((left, upper, right, lower))
+
     def make_subtitles(self, idx, line, sub_id):
 
         # make background image
@@ -40,15 +50,18 @@ class MakeSubImageFiles:
         # resize the bg image to 1920
         width, height = bg_image.size
         height_ratio = height / width
-        width, height = 1920, 1920 * height_ratio
+        width, height = YOUTUBE_WIDTH, YOUTUBE_WIDTH * height_ratio
         bg_image = bg_image.resize((width, int(height)))
+
+        # crop on height to make 1920 x 1080
+        bg_image = self.img_crop(bg_image)
 
         # set textbox height    
         top_margin = 630
         height = bg_image.size[1] - top_margin
 
         # make textbox
-        textbox = Image.new("RGBA", (1920, height), (0, 0, 0, 215))
+        textbox = Image.new("RGBA", (YOUTUBE_WIDTH, height), (0, 0, 0, 215))
         draw = ImageDraw.Draw(textbox)
 
         # tetxbox top y padding
