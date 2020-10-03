@@ -3,12 +3,12 @@ import textwrap
 from pathlib import Path
 from zipfile import ZipFile
 
+import requests
 from django.core.files.temp import NamedTemporaryFile
 from django.http import FileResponse
 from PIL import Image, ImageDraw, ImageFont
 
 from .zipper import get_zip
-
 
 BASE_DIR = Path(__file__).parent
 FONT_BASE = Path(__file__).parent.joinpath('library/fonts/')
@@ -38,11 +38,22 @@ class MakeSubImageFiles:
             left, upper = 0, delta
             right, lower = YOUTUBE_WIDTH, img.height - delta
             return img.crop((left, upper, right, lower))
+        else:
+            return img
 
-    def make_subtitles(self, idx, line, sub_id):
+    def download_image(self, link):
+        if link:
+            temp_bg = NamedTemporaryFile()
+            bg_file = requests.get(link, stream=True)
+            print('downloaded')
+            temp_bg.write(bg_file.content)
+            return Image.open(temp_bg)
+        else:
+            return Image.new('RGB', (YOUTUBE_WIDTH, YOUTUBE_HEIGHT))
+
+    def make_subtitles(self, idx, line, sub_id, bg_image):
 
         # make background image
-        bg_image = Image.open(BACKGROUND_IMAGE)
         bg_image = bg_image.convert('RGBA')
 
         # resize the bg image to 1920
@@ -91,10 +102,16 @@ class MakeSubImageFiles:
         for sub in self.submissions:
 
             lines = sub.dub_text.split('\n')
+            bg_image = self.download_image(sub.sub_bg_image)
 
             for idx, line in enumerate(lines):
                 if line.strip():
-                    tfile = self.make_subtitles(idx, line, sub.sub_id)
+                    tfile = self.make_subtitles(
+                        idx, 
+                        line, 
+                        sub.sub_id, 
+                        bg_image
+                        )
                     temporary_subtitles.append(tfile)
 
         return temporary_subtitles

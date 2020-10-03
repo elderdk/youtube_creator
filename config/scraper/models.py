@@ -15,6 +15,7 @@ class Submission(models.Model):
     scraped_time = models.DateTimeField(auto_now_add=True)
     dub_text = models.TextField(blank=True)
     sub_len = models.IntegerField(default=0, blank=True)
+    sub_bg_image = models.CharField(max_length=300, blank=True)
     
     def __str__(self):
         return self.title
