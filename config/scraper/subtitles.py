@@ -18,6 +18,9 @@ FONT_SIZE = 80
 BACKGROUND_IMAGE = BASE_DIR.joinpath('pottery.jpg')
 YOUTUBE_WIDTH = 1920
 YOUTUBE_HEIGHT = 1080
+SUBTITLE_TOP_MARGIN = 0
+SUBTITLE_OPACITY = 215
+TEXTWRAP_WIDTH = 25
 
 class MakeSubImageFiles:
     def __init__(self, submissions):
@@ -66,23 +69,24 @@ class MakeSubImageFiles:
         bg_image = self.img_crop(bg_image)
 
         # set textbox height    
-        top_margin = 630
-        height = bg_image.size[1] - top_margin
+        height = bg_image.size[1] - SUBTITLE_TOP_MARGIN
 
         # make textbox
-        textbox = Image.new("RGBA", (YOUTUBE_WIDTH, height), (0, 0, 0, 215))
+        textbox = Image.new(
+            "RGBA", (YOUTUBE_WIDTH, height), (0, 0, 0, SUBTITLE_OPACITY)
+            )
         draw = ImageDraw.Draw(textbox)
 
         # tetxbox top y padding
         y_loc = 10
 
         # write text
-        for subline in textwrap.wrap(line, width=20):     
+        for subline in textwrap.wrap(line, width=TEXTWRAP_WIDTH):     
             draw.text((100, y_loc), subline, font=self.otf_bold_font)
             y_loc += self.otf_bold_font.getsize(subline)[1]
 
         # paste the textbox on top of the bg_image
-        bg_image.paste(textbox, (0, top_margin), mask=textbox)
+        bg_image.paste(textbox, (0, SUBTITLE_TOP_MARGIN), mask=textbox)
         output = io.BytesIO()
         bg_image.save(output, format='png')
         hex_data = output.getvalue()
