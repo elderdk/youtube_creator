@@ -18,9 +18,10 @@ FONT_SIZE = 80
 BACKGROUND_IMAGE = BASE_DIR.joinpath('pottery.jpg')
 YOUTUBE_WIDTH = 1920
 YOUTUBE_HEIGHT = 1080
-SUBTITLE_TOP_MARGIN = 0
+SUBTITLE_TOP_MARGIN = 650
 SUBTITLE_OPACITY = 215
 TEXTWRAP_WIDTH = 25
+TEXTBOX_YPADDING = 10
 
 class MakeSubImageFiles:
     def __init__(self, submissions):
@@ -48,54 +49,71 @@ class MakeSubImageFiles:
         if link:
             temp_bg = NamedTemporaryFile()
             bg_file = requests.get(link, stream=True)
-            print('downloaded')
             temp_bg.write(bg_file.content)
             return Image.open(temp_bg)
         else:
-            return Image.new('RGB', (YOUTUBE_WIDTH, YOUTUBE_HEIGHT))
+            print('new img created')
+            return Image.new('RGBA', 
+                            (YOUTUBE_WIDTH, YOUTUBE_HEIGHT),
+                            (0, 0, 0, 0)
+                            )
 
-    def make_subtitles(self, idx, line, sub_id, bg_image):
-
-        # make background image
-        bg_image = bg_image.convert('RGBA')
-
-        # resize the bg image to 1920
-        width, height = bg_image.size
+    def image_resize(self, img):
+        width, height = img.size
         height_ratio = height / width
         width, height = YOUTUBE_WIDTH, YOUTUBE_WIDTH * height_ratio
-        bg_image = bg_image.resize((width, int(height)))
+        img = img.resize((width, int(height)))
+        return img
 
-        # crop on height to make 1920 x 1080
-        bg_image = self.img_crop(bg_image)
+    def image_collapse(self, bg_image, textbox):
+        bg_image.paste(textbox, (0, SUBTITLE_TOP_MARGIN), mask=textbox)
+        output = io.BytesIO()
+        bg_image.save(output, format='png')
+        hex_data = output.getvalue()
+        return hex_data
 
-        # set textbox height    
+    def make_textbox(self, bg_image, line):
         height = bg_image.size[1] - SUBTITLE_TOP_MARGIN
-
-        # make textbox
         textbox = Image.new(
             "RGBA", (YOUTUBE_WIDTH, height), (0, 0, 0, SUBTITLE_OPACITY)
             )
         draw = ImageDraw.Draw(textbox)
 
         # tetxbox top y padding
-        y_loc = 10
+        y_loc = TEXTBOX_YPADDING
 
         # write text
         for subline in textwrap.wrap(line, width=TEXTWRAP_WIDTH):     
             draw.text((100, y_loc), subline, font=self.otf_bold_font)
             y_loc += self.otf_bold_font.getsize(subline)[1]
 
-        # paste the textbox on top of the bg_image
-        bg_image.paste(textbox, (0, SUBTITLE_TOP_MARGIN), mask=textbox)
-        output = io.BytesIO()
-        bg_image.save(output, format='png')
-        hex_data = output.getvalue()
-
+        return textbox
+ 
+    def make_temporary_file(self, idx, sub_id, final_image):
         tfile = NamedTemporaryFile(
                 suffix='.png', 
                 prefix=self.file_name(idx, sub_id),
                 )
-        tfile.write(hex_data)
+        tfile.write(final_image)
+        return tfile
+
+    def make_subtitles(self, idx, line, sub_id, bg_image):
+
+        # make background image
+        bg_image = bg_image.convert('RGBA')
+
+        # resize and crop
+        bg_image = self.image_resize(bg_image)
+        bg_image = self.img_crop(bg_image)
+
+        # make textbox
+        textbox = self.make_textbox(bg_image, line)
+        
+        # paste the textbox on top of the bg_image
+        final_image = self.image_collapse(bg_image, textbox)
+
+        # make a named temporary file
+        tfile = self.make_temporary_file(idx, sub_id, final_image)
 
         return tfile
 
