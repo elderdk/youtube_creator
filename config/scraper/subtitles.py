@@ -1,11 +1,9 @@
 import io
 import textwrap
 from pathlib import Path
-from zipfile import ZipFile
 
 import requests
 from django.core.files.temp import NamedTemporaryFile
-from django.http import FileResponse
 from PIL import Image, ImageDraw, ImageFont
 
 from .zipper import get_zip
@@ -23,13 +21,14 @@ SUBTITLE_OPACITY = 215
 TEXTWRAP_WIDTH = 25
 TEXTBOX_YPADDING = 10
 
+
 class MakeSubImageFiles:
     def __init__(self, submissions):
         self.submissions = submissions
 
         # make text image
         self.otf_bold_font = ImageFont.truetype(
-            FONT_FILE.as_posix(), 
+            FONT_FILE.as_posix(),
             FONT_SIZE
             )
 
@@ -53,10 +52,9 @@ class MakeSubImageFiles:
             return Image.open(temp_bg)
         else:
             print('new img created')
-            return Image.new('RGBA', 
-                            (YOUTUBE_WIDTH, YOUTUBE_HEIGHT),
-                            (0, 0, 0, 0)
-                            )
+            return Image.new('RGBA',
+                             (YOUTUBE_WIDTH, YOUTUBE_HEIGHT), (0, 0, 0, 0)
+                             )
 
     def image_resize(self, img):
         width, height = img.size
@@ -83,15 +81,15 @@ class MakeSubImageFiles:
         y_loc = TEXTBOX_YPADDING
 
         # write text
-        for subline in textwrap.wrap(line, width=TEXTWRAP_WIDTH):     
+        for subline in textwrap.wrap(line, width=TEXTWRAP_WIDTH):
             draw.text((100, y_loc), subline, font=self.otf_bold_font)
             y_loc += self.otf_bold_font.getsize(subline)[1]
 
         return textbox
- 
+
     def make_temporary_file(self, idx, sub_id, final_image):
         tfile = NamedTemporaryFile(
-                suffix='.png', 
+                suffix='.png',
                 prefix=self.file_name(idx, sub_id),
                 )
         tfile.write(final_image)
@@ -108,7 +106,7 @@ class MakeSubImageFiles:
 
         # make textbox
         textbox = self.make_textbox(bg_image, line)
-        
+
         # paste the textbox on top of the bg_image
         final_image = self.image_collapse(bg_image, textbox)
 
@@ -129,9 +127,9 @@ class MakeSubImageFiles:
             for idx, line in enumerate(lines):
                 if line.strip():
                     tfile = self.make_subtitles(
-                        idx, 
-                        line, 
-                        sub.sub_id, 
+                        idx,
+                        line,
+                        sub.sub_id,
                         bg_image
                         )
                     temporary_subtitles.append(tfile)
